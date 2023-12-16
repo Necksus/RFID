@@ -44,12 +44,7 @@ products from Adafruit!
 #include <SPI.h>
 #include <Adafruit_PN532.h>
 #include "secret.h"
-// >>>>>>>>>>>
-#include <ezBuzzer.h> // ezBuzzer library
-
-const int BUZZER_PIN = 2;
-
-ezBuzzer buzzer(BUZZER_PIN); // create ezBuzzer object that attach to a pin;
+#include <ezBuzzer.h>
 
 // notes in the melody:
 int melody[] = {
@@ -89,6 +84,7 @@ int noteLength;
 #define PN532_IRQ   (2)
 #define PN532_RESET (3)  // Not connected by default on the NFC Shield
 
+const int BUZZER_PIN = 2;
 const int DELAY_BETWEEN_CARDS = 500;
 long timeLastCardRead = 0;
 boolean readerDisabled = false;
@@ -97,10 +93,12 @@ int irqPrev;
 
 // This example uses the IRQ line, which is available when in I2C mode.
 Adafruit_PN532 nfc(PN532_IRQ, PN532_RESET);
+ezBuzzer buzzer(BUZZER_PIN);
 
 void setup(void) {
   noteLength = sizeof(noteDurations) / sizeof(int);
   Serial.begin(115200);
+  Serial2.begin(115200);
   while (!Serial) delay(10); // for Leonardo/Micro/Zero
 
   Serial.println("Hello!");
@@ -125,6 +123,7 @@ void loop(void) {
 /*  if (buzzer.getState() == BUZZER_IDLE) { // if stopped
     buzzer.playMelody(melody, noteDurations, noteLength); // playing
   }  */
+
   if (readerDisabled) {
     if (millis() - timeLastCardRead > DELAY_BETWEEN_CARDS) {
       readerDisabled = false;
@@ -134,8 +133,8 @@ void loop(void) {
     irqCurr = digitalRead(PN532_IRQ);
 
     // When the IRQ is pulled low - the reader has got something for us.
-    if (irqCurr == LOW && irqPrev == HIGH) {
-       //Serial.println("Got NFC IRQ");
+    if (irqCurr == LOW && irqPrev == HIGH)
+    {
        handleCardDetected();
     }
 
@@ -143,33 +142,32 @@ void loop(void) {
   }
 }
 
-void startListeningToNFC() {
+void startListeningToNFC() 
+{
   // Reset our IRQ indicators
   irqPrev = irqCurr = HIGH;
 
-  //Serial.println("Starting passive read for an ISO14443A Card ...");
-  if (!nfc.startPassiveTargetIDDetection(PN532_MIFARE_ISO14443A)) {
-    //Serial.println("No card found. Waiting...");
-  } else {
-    Serial.println("Card already present.");
+  if (nfc.startPassiveTargetIDDetection(PN532_MIFARE_ISO14443A)) 
+  {
+    // Serial.println("Card already present.");
     handleCardDetected();
   }
 }
 
-void handleCardDetected() {
+void handleCardDetected()
+{
     uint8_t success = false;
     uint8_t uid[] = { 0, 0, 0, 0, 0, 0, 0 };  // Buffer to store the returned UID
     uint8_t uidLength;                        // Length of the UID (4 or 7 bytes depending on ISO14443A card type)
 
     // read the NFC tag's info
     success = nfc.readDetectedPassiveTargetID(uid, &uidLength);
-    //Serial.println(success ? "Read successful" : "Read failed (not a card?)");
 
     if (success) {
       // Display some basic information about the card
-      Serial.println("Found an ISO14443A card");
-      Serial.print("  UID Length: ");Serial.print(uidLength, DEC);Serial.println(" bytes");
-      Serial.print("  UID Value: ");
+      //Serial.println("Found an ISO14443A card");
+      //Serial.print("  UID Length: ");Serial.print(uidLength, DEC);Serial.println(" bytes");
+      Serial.print("Found tag with Id: ");
       nfc.PrintHex(uid, uidLength);
 
       if (uidLength == 4)
@@ -182,48 +180,46 @@ void handleCardDetected() {
         cardid |= uid[2];
         cardid <<= 8;
         cardid |= uid[3];
-        Serial.print("Seems to be a Mifare Classic card #");
-        Serial.println(cardid);
+        //Serial.print("Seems to be a Mifare Classic card #");
+        //Serial.println(cardid);
 
+        // Read block 4 with secret authentication key
         success = nfc.mifareclassic_AuthenticateBlock(uid, uidLength, 4, 0, keya);
-
-      if (success)
-      {
-        Serial.println("Sector 1 (Blocks 4..7) has been authenticated");
-        uint8_t data[16];
-
-        // If you want to write something to block 4 to test with, uncomment
-		// the following line and this text should be read back in a minute
-        //memcpy(data, (const uint8_t[]){ 0x4B, 0x58, 0x52, 0x88, 0xC9, 0x88, 0x04, 0x00, 0x46, 0x49, 0x36, 0x14, 0x5D, 0x10, 0x09 }, sizeof data);
-        // success = nfc.mifareclassic_WriteDataBlock (4, data);
-        // if (!success)
-        // {
-        //    Serial.println("Cannot write data!");
-        // }
-
-        // Try to read the contents of block 4
-        success = nfc.mifareclassic_ReadDataBlock(4, data);
-
         if (success)
         {
-          // Data seems to have been read ... spit it out
-          Serial.println("Reading Block 4:");
-          nfc.PrintHexChar(data, 16);
-          Serial.println("");
+          uint8_t data[16];
+          char str[4];
 
-          buzzer.playMelody(melody, noteDurations, noteLength);
-          // Wait a bit before reading the card again
-          //delay(1000);
+          // Try to read the contents of block 4
+          success = nfc.mifareclassic_ReadDataBlock(4, data);
+          if (success)
+          {
+            // Data seems to have been read ... spit it out
+            //Serial.println("Reading Block 4:");
+
+            Serial2.print("{\"PN532\":{\"UID\":\"");
+            for(int i=0; i<16; i++)
+            {
+              sprintf(str,"%x",data[i]);
+              Serial2.print(str);
+            }
+            Serial2.print("\", \"DATA\":\"\"}}\n");
+
+            //nfc.PrintHexChar(data, 16);
+
+            buzzer.playMelody(melody, noteDurations, noteLength);
+            // Wait a bit before reading the card again
+            //delay(1000);
+          }
+          else
+          {
+            Serial.println("Ooops ... unable to read the requested block.  Try another key?");
+          }
         }
         else
         {
-          Serial.println("Ooops ... unable to read the requested block.  Try another key?");
+          Serial.println("Ooops ... authentication failed: Try another key?");
         }
-      }
-      else
-      {
-        Serial.println("Ooops ... authentication failed: Try another key?");
-      }
 
       }
       Serial.println("");
