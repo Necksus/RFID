@@ -20,7 +20,7 @@ fz.ptvo_on_off = {
           const binaryEndpoint = model.meta && model.meta.binaryEndpoints && model.meta.binaryEndpoints[endpointName];
           const prefix = (binaryEndpoint) ? model.meta.binaryEndpoints[endpointName] : 'state';
           const property = `${prefix}_${endpointName}`;
-	  if (binaryEndpoint) {
+      if (binaryEndpoint) {
             return {[property]: msg.data['onOff'] === 1};
           }
           return {[property]: msg.data['onOff'] === 1 ? 'ON' : 'OFF'};
@@ -34,18 +34,28 @@ const device = {
     zigbeeModel: ['ptvo.rfid'],
     model: 'ptvo.rfid',
     vendor: 'Fox-Nest Inc',
-    description: '[Configurable firmware](https://ptvo.info/zigbee-configurable-firmware-features/)',
-    fromZigbee: [fz.ignore_basic_report, fz.ptvo_switch_uart,],
-    toZigbee: [tz.ptvo_switch_trigger, tz.ptvo_switch_uart,],
-    exposes: [exposes.text('action', ea.STATE_SET).withDescription('button clicks or data from/to UART'),
-],
+    description: 'DIY RFID tag reader',
+    fromZigbee: [
+        fz.on_off,
+        fz.ignore_basic_report,
+        fz.ptvo_switch_uart,
+        fz.ptvo_multistate_action
+    ],
+    toZigbee: [
+        tz.ptvo_switch_trigger, 
+        tz.ptvo_switch_uart,
+        tz.on_off
+    ],
+    exposes: [
+        exposes.text('action', ea.STATE_SET).withDescription('RFID tag scanned'),
+        e.switch().withEndpoint('l2')
+    ],
     meta: {
-        multiEndpoint: true,
-        
+        multiEndpoint: true        
     },
     endpoint: (device) => {
         return {
-            l1: 1, action: 1,
+            l1: 1, action: 1, 'l2': 2,
         };
     },
     configure: async (device, coordinatorEndpoint, logger) => {

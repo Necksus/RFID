@@ -46,8 +46,28 @@ products from Adafruit!
 #include "secret.h"
 #include <ezBuzzer.h>
 
+
+int melody[] =
+{
+    NOTE_F5, NOTE_B5
+};
+int noteDurations[] = 
+{
+    8, 12
+};
+
+int melody2[] =
+{
+    NOTE_F5, 0
+};
+int noteDurations2[] = 
+{
+    4, 4
+};
+
+
 // notes in the melody:
-int melody[] = {
+int melody1[] = {
   NOTE_E5, NOTE_E5, NOTE_E5,
   NOTE_E5, NOTE_E5, NOTE_E5,
   NOTE_E5, NOTE_G5, NOTE_C5, NOTE_D5,
@@ -59,7 +79,7 @@ int melody[] = {
 };
 
 // note durations: 4 = quarter note, 8 = eighth note, etc, also called tempo:
-int noteDurations[] = {
+int noteDurations1[] = {
   8, 8, 4,
   8, 8, 4,
   8, 8, 8, 8,
@@ -85,6 +105,7 @@ int noteLength;
 #define PN532_RESET (3)  // Not connected by default on the NFC Shield
 
 const int BUZZER_PIN = 2;
+const int ALARM_PIN = 3;
 const int DELAY_BETWEEN_CARDS = 500;
 long timeLastCardRead = 0;
 boolean readerDisabled = false;
@@ -97,6 +118,7 @@ ezBuzzer buzzer(BUZZER_PIN);
 
 void setup(void) {
   noteLength = sizeof(noteDurations) / sizeof(int);
+  pinMode(ALARM_PIN, INPUT);
   Serial.begin(115200);
   Serial2.begin(115200);
   while (!Serial) delay(10); // for Leonardo/Micro/Zero
@@ -120,9 +142,10 @@ void setup(void) {
 
 void loop(void) {
   buzzer.loop();
-/*  if (buzzer.getState() == BUZZER_IDLE) { // if stopped
-    buzzer.playMelody(melody, noteDurations, noteLength); // playing
-  }  */
+ 
+  if (digitalRead(ALARM_PIN) != 0 && buzzer.getState() == BUZZER_IDLE) { // if stopped
+    buzzer.playMelody(melody2, noteDurations2, noteLength); // playing
+  }  
 
   if (readerDisabled) {
     if (millis() - timeLastCardRead > DELAY_BETWEEN_CARDS) {
