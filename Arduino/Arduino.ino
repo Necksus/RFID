@@ -1,51 +1,19 @@
-/**************************************************************************/
-/*!
-    @file     readMifareClassicIrq.pde
-    @author   Adafruit Industries
-	@license  BSD (see license.txt)
 
-    This example will wait for any ISO14443A card or tag, and
-    depending on the size of the UID will attempt to read from it.
-
-    If the card has a 4-byte UID it is probably a Mifare
-    Classic card, and the following steps are taken:
-
-    Reads the 4 byte (32 bit) ID of a MiFare Classic card.
-    Since the classic cards have only 32 bit identifiers you can stick
-	them in a single variable and use that to compare card ID's as a
-	number. This doesn't work for ultralight cards that have longer 7
-	byte IDs!
-
-    Note that you need the baud rate to be 115200 because we need to
-	print out the data and read from the card at the same time!
-
-This is an example sketch for the Adafruit PN532 NFC/RFID breakout boards
-This library works with the Adafruit NFC breakout
-  ----> https://www.adafruit.com/products/364
-
-Check out the links above for our tutorials and wiring diagrams
-
-This example is for communicating with the PN532 chip using I2C. Wiring
-should be as follows:
-  PN532 SDA -> SDA pin
-  PN532 SCL -> SCL pin
-  PN532 IRQ -> D2
-  PN532 SDA -> 3.3v (with 2k resistor)
-  PN532 SCL -> 3.3v (with 2k resistor)
-  PN532 3.3v -> 3.3v
-  PN532 GND -> GND
-
-Adafruit invests time and resources providing this open source code,
-please support Adafruit and open-source hardware by purchasing
-products from Adafruit!
-*/
-/**************************************************************************/
 #include <Wire.h>
 #include <SPI.h>
 #include <Adafruit_PN532.h>
 #include "secret.h"
 #include <ezBuzzer.h>
 
+#define DEBUG
+
+#ifdef DEBUG
+  #define DEBUG_PRINT(...)   Serial.print (__VA_ARGS__)
+  #define DEBUG_PRINTLN(...) Serial.println (__VA_ARGS__)
+#else
+  #define DEBUG_PRINT(...)
+  #define DEBUG_PRINTLN(...) 
+#endif
 
 int melody[] =
 {
@@ -62,7 +30,7 @@ int melody2[] =
 };
 int noteDurations2[] = 
 {
-    4, 4
+    14, 2
 };
 
 
@@ -91,13 +59,7 @@ int noteDurations1[] = {
 };
 
 int noteLength;
-// <<<<<<<<<<<
 
-// If using the breakout with SPI, define the pins for SPI communication.
-#define PN532_SCK  (2)
-#define PN532_MOSI (3)
-#define PN532_SS   (4)
-#define PN532_MISO (5)
 
 // If using the breakout or shield with I2C, define just the pins connected
 // to the IRQ and reset lines.  Use the values below (2, 3) for the shield!
@@ -108,7 +70,7 @@ const int BUZZER_PIN = 2;
 const int ALARM_PIN = 3;
 const int DELAY_BETWEEN_CARDS = 500;
 long timeLastCardRead = 0;
-boolean readerDisabled = false;
+bool readerDisabled = false;
 int irqCurr;
 int irqPrev;
 
@@ -116,43 +78,50 @@ int irqPrev;
 Adafruit_PN532 nfc(PN532_IRQ, PN532_RESET);
 ezBuzzer buzzer(BUZZER_PIN);
 
-void setup(void) {
+void setup(void)
+{
   noteLength = sizeof(noteDurations) / sizeof(int);
   pinMode(ALARM_PIN, INPUT);
   Serial.begin(115200);
   Serial2.begin(115200);
+
   while (!Serial) delay(10); // for Leonardo/Micro/Zero
 
-  Serial.println("Hello!");
-
+  DEBUG_PRINTLN("Hello!");
   nfc.begin();
 
   uint32_t versiondata = nfc.getFirmwareVersion();
   if (! versiondata) {
-    Serial.print("Didn't find PN53x board");
+    DEBUG_PRINT("Didn't find PN53x board");
     while (1); // halt
   }
   // Got ok data, print it out!
-  Serial.print("Found chip PN5"); Serial.println((versiondata>>24) & 0xFF, HEX);
-  Serial.print("Firmware ver. "); Serial.print((versiondata>>16) & 0xFF, DEC);
-  Serial.print('.'); Serial.println((versiondata>>8) & 0xFF, DEC);
+  DEBUG_PRINT("Found chip PN5"); DEBUG_PRINTLN((versiondata>>24) & 0xFF, HEX);
+  DEBUG_PRINT("Firmware ver. "); DEBUG_PRINT((versiondata>>16) & 0xFF, DEC); DEBUG_PRINT('.'); DEBUG_PRINTLN((versiondata>>8) & 0xFF, DEC);
 
   startListeningToNFC();
 }
 
-void loop(void) {
+void loop(void)
+{
   buzzer.loop();
  
-  if (digitalRead(ALARM_PIN) != 0 && buzzer.getState() == BUZZER_IDLE) { // if stopped
-    buzzer.playMelody(melody2, noteDurations2, noteLength); // playing
+  // Loop melody
+  if (digitalRead(ALARM_PIN) != 0 && buzzer.getState() == BUZZER_IDLE)
+  {
+    buzzer.playMelody(melody2, noteDurations2, noteLength);
   }  
 
-  if (readerDisabled) {
-    if (millis() - timeLastCardRead > DELAY_BETWEEN_CARDS) {
+  if (readerDisabled)
+  {
+    if (millis() - timeLastCardRead > DELAY_BETWEEN_CARDS) 
+    {
       readerDisabled = false;
       startListeningToNFC();
     }
-  } else {
+  } 
+  else 
+  {
     irqCurr = digitalRead(PN532_IRQ);
 
     // When the IRQ is pulled low - the reader has got something for us.
@@ -172,7 +141,7 @@ void startListeningToNFC()
 
   if (nfc.startPassiveTargetIDDetection(PN532_MIFARE_ISO14443A)) 
   {
-    // Serial.println("Card already present.");
+    // DEBUG_PRINTLN("Card already present.");
     handleCardDetected();
   }
 }
@@ -186,11 +155,9 @@ void handleCardDetected()
     // read the NFC tag's info
     success = nfc.readDetectedPassiveTargetID(uid, &uidLength);
 
-    if (success) {
-      // Display some basic information about the card
-      //Serial.println("Found an ISO14443A card");
-      //Serial.print("  UID Length: ");Serial.print(uidLength, DEC);Serial.println(" bytes");
-      Serial.print("Found tag with Id: ");
+    if (success)
+    {
+      DEBUG_PRINT("Found tag with Id: ");
       nfc.PrintHex(uid, uidLength);
 
       if (uidLength == 4)
@@ -203,8 +170,6 @@ void handleCardDetected()
         cardid |= uid[2];
         cardid <<= 8;
         cardid |= uid[3];
-        //Serial.print("Seems to be a Mifare Classic card #");
-        //Serial.println(cardid);
 
         // Read block 4 with secret authentication key
         success = nfc.mifareclassic_AuthenticateBlock(uid, uidLength, 4, 0, keya);
@@ -217,9 +182,6 @@ void handleCardDetected()
           success = nfc.mifareclassic_ReadDataBlock(4, data);
           if (success)
           {
-            // Data seems to have been read ... spit it out
-            //Serial.println("Reading Block 4:");
-
             Serial2.print("{\"PN532\":{\"UID\":\"");
             for(int i=0; i<16; i++)
             {
@@ -228,24 +190,18 @@ void handleCardDetected()
             }
             Serial2.print("\", \"DATA\":\"\"}}\n");
 
-            //nfc.PrintHexChar(data, 16);
-
             buzzer.playMelody(melody, noteDurations, noteLength);
-            // Wait a bit before reading the card again
-            //delay(1000);
           }
           else
           {
-            Serial.println("Ooops ... unable to read the requested block.  Try another key?");
+            DEBUG_PRINTLN("Ooops ... unable to read the requested block.  Try another key?");
           }
         }
         else
         {
-          Serial.println("Ooops ... authentication failed: Try another key?");
+          DEBUG_PRINTLN("Ooops ... authentication failed: Try another key?");
         }
-
       }
-      Serial.println("");
 
       timeLastCardRead = millis();
     }
