@@ -15,50 +15,23 @@
   #define DEBUG_PRINTLN(...) 
 #endif
 
-int melody[] =
+int tagDetectedNotes[] =
 {
-    NOTE_F5, NOTE_B5
+    NOTE_F5, NOTE_B5, 0
 };
-int noteDurations[] = 
+int tagDetectedDurations[] = 
 {
-    8, 12
+    8, 12, 2
 };
 
-int melody2[] =
+int delayNotificationNotes[] =
 {
     NOTE_F5, 0
 };
-int noteDurations2[] = 
+int delayNotificationDurations[] = 
 {
     14, 2
 };
-
-
-// notes in the melody:
-int melody1[] = {
-  NOTE_E5, NOTE_E5, NOTE_E5,
-  NOTE_E5, NOTE_E5, NOTE_E5,
-  NOTE_E5, NOTE_G5, NOTE_C5, NOTE_D5,
-  NOTE_E5,
-  NOTE_F5, NOTE_F5, NOTE_F5, NOTE_F5,
-  NOTE_F5, NOTE_E5, NOTE_E5, NOTE_E5, NOTE_E5,
-  NOTE_E5, NOTE_D5, NOTE_D5, NOTE_E5,
-  NOTE_D5, NOTE_G5
-};
-
-// note durations: 4 = quarter note, 8 = eighth note, etc, also called tempo:
-int noteDurations1[] = {
-  8, 8, 4,
-  8, 8, 4,
-  8, 8, 8, 8,
-  2,
-  8, 8, 8, 8,
-  8, 8, 8, 16, 16,
-  8, 8, 8, 8,
-  4, 4
-};
-
-int noteLength;
 
 
 // If using the breakout or shield with I2C, define just the pins connected
@@ -68,6 +41,9 @@ int noteLength;
 
 const int BUZZER_PIN = 2;
 const int ALARM_PIN = 3;
+const int FUNC1_PIN = 4;
+const int FUNC2_PIN = 5;
+
 const int DELAY_BETWEEN_CARDS = 500;
 long timeLastCardRead = 0;
 bool readerDisabled = false;
@@ -80,8 +56,10 @@ ezBuzzer buzzer(BUZZER_PIN);
 
 void setup(void)
 {
-  noteLength = sizeof(noteDurations) / sizeof(int);
   pinMode(ALARM_PIN, INPUT);
+  pinMode(FUNC1_PIN, INPUT);
+  pinMode(FUNC2_PIN, INPUT);
+
   Serial.begin(115200);
   Serial2.begin(115200);
 
@@ -105,11 +83,11 @@ void setup(void)
 void loop(void)
 {
   buzzer.loop();
- 
-  // Loop melody
+
+  // Play delay notification in loop
   if (digitalRead(ALARM_PIN) != 0 && buzzer.getState() == BUZZER_IDLE)
   {
-    buzzer.playMelody(melody2, noteDurations2, noteLength);
+    buzzer.playMelody(delayNotificationNotes, delayNotificationDurations, sizeof(delayNotificationNotes) / sizeof(int));
   }  
 
   if (readerDisabled)
@@ -190,7 +168,7 @@ void handleCardDetected()
             }
             Serial2.print("\", \"DATA\":\"\"}}\n");
 
-            buzzer.playMelody(melody, noteDurations, noteLength);
+            buzzer.playMelody(tagDetectedNotes, tagDetectedDurations, sizeof(tagDetectedNotes) / sizeof(int));
           }
           else
           {

@@ -48,14 +48,20 @@ const device = {
     ],
     exposes: [
         exposes.text('action', ea.STATE_SET).withDescription('RFID tag scanned'),
-        e.switch().withEndpoint('l2')
+        e.switch().withEndpoint('l2'),
+        e.switch().withEndpoint('l3'),
+        e.switch().withEndpoint('l4')
     ],
     meta: {
         multiEndpoint: true        
     },
     endpoint: (device) => {
         return {
-            l1: 1, action: 1, 'l2': 2,
+            l1: 1, 
+			action: 1, 
+			'l2': 2, 
+			'l3': 3, 
+			'l4': 4
         };
     },
     configure: async (device, coordinatorEndpoint, logger) => {
