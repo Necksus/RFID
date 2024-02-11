@@ -20,16 +20,16 @@ Arduino 6 (Digital) => CC2530 (P06)
 
 ## Arduino Every
 
+Arduino 8 (SDA/A4) => PN532 (SDA)
+Arduino 9 (SCL/A5) => PN532 (SCL)
+
 Arduino 16 (TX) => CC2530 P02 (UART)
+Arduino 20 (D2) => CC2530 (P04)
+Arduino 21 (D3) => CC2530 (P06)
+Arduino 22 (D4) => CC2530 (P05)
 
-Arduino 8 (SDA) => PN532 (SDA)
-Arduino 9 (SCL) => PN532 (SCL)
-
-Arduino 20 (Digital) => Buzzer
-Arduino 21 (Digital) => LED
-Arduino 22 (Digital) => CC2530 (P04)
-Arduino 23 (Digital) => CC2530 (P05)
-Arduino 24 (Digital) => CC2530 (P06)
+Arduino 23 (D5) => Buzzer
+Arduino 24 (D6) => LED
 
 
 Open Home Assistant "Parameters / Automation and scenes", add an automation configured to trigger when Home Assistant is started, then publish this MQTT message:
