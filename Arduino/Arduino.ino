@@ -1,9 +1,11 @@
+// TODO : check why alarm works only with pin 4, update script "Alarmo beep reader tag" if fixed 
 
 #include <Wire.h>
 #include <SPI.h>
 #include <Adafruit_PN532.h>
 #include "secret.h"
 #include <ezBuzzer.h>
+#include <SK6812.h>
 
 #define DEBUG
 
@@ -14,6 +16,69 @@
   #define DEBUG_PRINT(...)
   #define DEBUG_PRINTLN(...) 
 #endif
+
+
+#define LED_IDLE  0
+#define LED_ON    1
+#define LED_OFF   2
+class BlinkingSK6812 : public SK6812 {
+public: 
+	BlinkingSK6812(uint16_t num_led) : SK6812(num_led)
+  {
+  }
+
+  void play(RGBW px_value, unsigned long delay)
+  {
+    _state = LED_OFF;
+    _delay = delay;
+    _lastTimer = 0;
+    _on.r= px_value.r;
+    _on.g= px_value.g;
+    _on.b= px_value.b;
+    _on.w= px_value.w;
+  }
+
+  void stop()
+  {
+    if (_state != LED_IDLE)
+    {
+      set_rgbw (0, _off);
+      sync();
+      _state = LED_IDLE;
+    }
+  }
+
+  int getState(void)
+  {
+    return _state;
+  }
+
+  void loop()
+  {
+    if (_state != LED_IDLE && millis() - _lastTimer > _delay)
+    {
+      if (_state == LED_OFF)
+      {
+        set_rgbw (0, _on);
+        _state = LED_ON;
+      }
+      else
+      {
+        set_rgbw (0, _off);
+        _state = LED_OFF;
+      }
+      sync();
+      _lastTimer = millis();
+    }
+  }
+	
+private:
+  RGBW _on = {0, 0, 0, 0};
+  RGBW _off = {0, 0, 0, 0};
+  int _state;
+  unsigned long _delay;
+  unsigned long _lastTimer;
+};
 
 int tagDetectedNotes[] =
 {
@@ -39,10 +104,10 @@ int delayNotificationDurations[] =
 #define PN532_IRQ   (2)
 #define PN532_RESET (3)  // Not connected by default on the NFC Shield
 
-const int BUZZER_PIN = 2;
-const int ALARM_PIN = 3;
-const int FUNC1_PIN = 4;
-const int FUNC2_PIN = 5;
+
+const int ALARM_PIN = 4;
+const int BUZZER_PIN = 5;
+const int LED_PIN = 6;
 
 const int DELAY_BETWEEN_CARDS = 500;
 long timeLastCardRead = 0;
@@ -50,15 +115,19 @@ bool readerDisabled = false;
 int irqCurr;
 int irqPrev;
 
+RGBW RedColor = {0, 5, 0, 0};
+RGBW NoColor = {0, 0, 0, 0};
+
 // This example uses the IRQ line, which is available when in I2C mode.
 Adafruit_PN532 nfc(PN532_IRQ, PN532_RESET);
 ezBuzzer buzzer(BUZZER_PIN);
+BlinkingSK6812 LED(1);
 
 void setup(void)
 {
   pinMode(ALARM_PIN, INPUT);
-  pinMode(FUNC1_PIN, INPUT);
-  pinMode(FUNC2_PIN, INPUT);
+
+  LED.set_output(LED_PIN);  
 
   Serial.begin(115200);
   Serial2.begin(115200);
@@ -83,12 +152,21 @@ void setup(void)
 void loop(void)
 {
   buzzer.loop();
+  LED.loop();
 
   // Play delay notification in loop
-  if (digitalRead(ALARM_PIN) != 0 && buzzer.getState() == BUZZER_IDLE)
+  if (digitalRead(ALARM_PIN) != 0)
   {
-    buzzer.playMelody(delayNotificationNotes, delayNotificationDurations, sizeof(delayNotificationNotes) / sizeof(int));
-  }  
+    if (buzzer.getState() == BUZZER_IDLE)
+      buzzer.playMelody(delayNotificationNotes, delayNotificationDurations, sizeof(delayNotificationNotes) / sizeof(int));
+
+    if (LED.getState() == LED_IDLE)
+      LED.play(RedColor, 200);
+  }
+  else
+  {
+    LED.stop();
+  }
 
   if (readerDisabled)
   {
