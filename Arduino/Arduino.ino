@@ -130,7 +130,7 @@ void setup(void)
   LED.set_output(LED_PIN);  
 
   Serial.begin(115200);
-  Serial2.begin(115200);
+  Serial1.begin(115200);
 
   while (!Serial) delay(10); // for Leonardo/Micro/Zero
 
@@ -238,13 +238,13 @@ void handleCardDetected()
           success = nfc.mifareclassic_ReadDataBlock(4, data);
           if (success)
           {
-            Serial2.print("{\"PN532\":{\"UID\":\"");
+            Serial1.print("{\"PN532\":{\"UID\":\"");
             for(int i=0; i<16; i++)
             {
               sprintf(str,"%x",data[i]);
-              Serial2.print(str);
+              Serial1.print(str);
             }
-            Serial2.print("\", \"DATA\":\"\"}}\n");
+            Serial1.print("\", \"DATA\":\"\"}}\n");
 
             buzzer.playMelody(tagDetectedNotes, tagDetectedDurations, sizeof(tagDetectedNotes) / sizeof(int));
           }
