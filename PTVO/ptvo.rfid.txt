@@ -1,9 +1,9 @@
 Board type: CC2530 + CC2591
-Device type: End device without routing
+Device type: Router
  Transmit enable (TXEN): P12, Receive enable (RXEN): P14
 Manufacturer name: Fox-Nest Inc
 Model ID: ptvo.rfid
-Update firmware's timestamp : 2024-01-01
+Update firmware's timestamp : 2024-02-23
 Set default reporting interval (s): 60
 
 Output pins:

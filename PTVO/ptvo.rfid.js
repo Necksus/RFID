@@ -2,13 +2,13 @@ const zigbeeHerdsmanConverters = require('zigbee-herdsman-converters');
 const zigbeeHerdsmanUtils = require('zigbee-herdsman-converters/lib/utils');
 
 
-const exposes = zigbeeHerdsmanConverters.exposes;
+const exposes = zigbeeHerdsmanConverters['exposes'] || require("zigbee-herdsman-converters/lib/exposes");
 const ea = exposes.access;
 const e = exposes.presets;
-const fz = zigbeeHerdsmanConverters.fromZigbeeConverters;
-const tz = zigbeeHerdsmanConverters.toZigbeeConverters;
+const fz = zigbeeHerdsmanConverters.fromZigbeeConverters || zigbeeHerdsmanConverters.fromZigbee;
+const tz = zigbeeHerdsmanConverters.toZigbeeConverters || zigbeeHerdsmanConverters.toZigbee;
 
-const ptvo_switch = zigbeeHerdsmanConverters.findByDevice({modelID: 'ptvo.switch'});
+const ptvo_switch = (zigbeeHerdsmanConverters.findByModel)?zigbeeHerdsmanConverters.findByModel('ptvo.switch'):zigbeeHerdsmanConverters.findByDevice({modelID: 'ptvo.switch'});
 fz.legacy = ptvo_switch.meta.tuyaThermostatPreset;
 fz.ptvo_on_off = {
   cluster: 'genOnOff',
