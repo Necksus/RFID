@@ -7,6 +7,11 @@
 #include <ezBuzzer.h>
 #include <SK6812.h>
 
+const int ALARM_PIN = 4;
+const int BUZZER_PIN = 5;
+const int LED_PIN = 6;
+const int DELAY_BETWEEN_CARDS = 2000;
+
 #define DEBUG
 
 #ifdef DEBUG
@@ -80,18 +85,28 @@ private:
   unsigned long _lastTimer;
 };
 
-int tagDetectedNotes[] =
+int validTagDetectedNotes[] =
 {
     NOTE_F5, NOTE_B5, 0
 };
-int tagDetectedDurations[] = 
+int validTagDetectedDurations[] = 
 {
     8, 12, 2
 };
 
-int delayNotificationNotes[] =
+int invalidTagDetectedNotes[] =
 {
     NOTE_F5, 0
+};
+int invalidTagDetectedDurations[] = 
+{
+    1, 2
+};
+
+
+int delayNotificationNotes[] =
+{
+    NOTE_C6, 0
 };
 int delayNotificationDurations[] = 
 {
@@ -104,12 +119,6 @@ int delayNotificationDurations[] =
 #define PN532_IRQ   (2)
 #define PN532_RESET (3)  // Not connected by default on the NFC Shield
 
-
-const int ALARM_PIN = 4;
-const int BUZZER_PIN = 5;
-const int LED_PIN = 6;
-
-const int DELAY_BETWEEN_CARDS = 500;
 long timeLastCardRead = 0;
 bool readerDisabled = false;
 int irqCurr;
@@ -129,16 +138,19 @@ void setup(void)
 
   LED.set_output(LED_PIN);  
 
+#ifdef DEBUG
   Serial.begin(115200);
+#endif
   Serial1.begin(115200);
 
   while (!Serial) delay(10); // for Leonardo/Micro/Zero
 
-  DEBUG_PRINTLN("Hello!");
+  DEBUG_PRINTLN("RFID tag reader is starting...");
   nfc.begin();
 
   uint32_t versiondata = nfc.getFirmwareVersion();
-  if (! versiondata) {
+  if (! versiondata) 
+  {
     DEBUG_PRINT("Didn't find PN53x board");
     while (1); // halt
   }
@@ -146,6 +158,7 @@ void setup(void)
   DEBUG_PRINT("Found chip PN5"); DEBUG_PRINTLN((versiondata>>24) & 0xFF, HEX);
   DEBUG_PRINT("Firmware ver. "); DEBUG_PRINT((versiondata>>16) & 0xFF, DEC); DEBUG_PRINT('.'); DEBUG_PRINTLN((versiondata>>8) & 0xFF, DEC);
 
+  delay(2000);
   startListeningToNFC();
 }
 
@@ -197,7 +210,6 @@ void startListeningToNFC()
 
   if (nfc.startPassiveTargetIDDetection(PN532_MIFARE_ISO14443A)) 
   {
-    // DEBUG_PRINTLN("Card already present.");
     handleCardDetected();
   }
 }
@@ -246,16 +258,18 @@ void handleCardDetected()
             }
             Serial1.print("\", \"DATA\":\"\"}}\n");
 
-            buzzer.playMelody(tagDetectedNotes, tagDetectedDurations, sizeof(tagDetectedNotes) / sizeof(int));
+            buzzer.playMelody(validTagDetectedNotes, validTagDetectedDurations, sizeof(validTagDetectedNotes) / sizeof(int));
           }
           else
           {
             DEBUG_PRINTLN("Ooops ... unable to read the requested block.  Try another key?");
+            buzzer.playMelody(invalidTagDetectedNotes, invalidTagDetectedDurations, sizeof(invalidTagDetectedNotes) / sizeof(int));
           }
         }
         else
         {
           DEBUG_PRINTLN("Ooops ... authentication failed: Try another key?");
+          buzzer.playMelody(invalidTagDetectedNotes, invalidTagDetectedDurations, sizeof(invalidTagDetectedNotes) / sizeof(int));
         }
       }
 
