@@ -49,7 +49,7 @@ const device = {
     exposes: [
         exposes.text('action', ea.STATE_SET).withDescription('RFID tag scanned'),
 //        e.switch().withEndpoint('Unused 1'),
-        e.switch().withEndpoint('Beep')
+        e.switch().withEndpoint('Beep').withDescription('Beep for entre or exit delay')
 //        e.switch().withEndpoint('Unused 2')
     ],
     meta: {
